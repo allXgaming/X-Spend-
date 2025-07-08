@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon App Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        :root {
+            --dark-bg: #0e0e0e;
+            --container-bg: rgba(20, 20, 30, 0.5);
+            --border-color: rgba(255, 255, 255, 0.2);
+            --input-bg: rgba(0,0,0,0.4);
+            --focus-glow: #00ffff;
+            --gradient-1: #ff00ff;
+            --gradient-2: #9f00ff;
+            --gradient-3: #00ffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--dark-bg);
+            background-image: radial-gradient(circle at top left, rgba(159, 0, 255, 0.2), transparent 30%), radial-gradient(circle at bottom right, rgba(0, 255, 255, 0.2), transparent 30%);
+            color: #eee;
+            min-height: 100vh;
+            background-attachment: fixed;
+            overflow-x: hidden;
+        }
+
+        #app {
+            padding: 1.5rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* General Layout & Page Views */
+        .page-view {
+            display: none;
+        }
+        .page-view.active {
+            display: block;
+        }
+        
+        /* Containers */
+        .content-box {
+            background: var(--container-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 25px;
+            padding: 2rem;
+            margin: 2rem auto;
+            max-width: 700px;
+        }
+
+        /* Headings */
+        h1, h2 {
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--gradient-1), var(--gradient-2), var(--gradient-3));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        /* Header */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            flex-shrink: 0;
+        }
+        
+        .menu-icon {
+            font-size: 2rem;
+            cursor: pointer;
+            color: #fff;
+            padding: 0.5rem;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        #search-bar {
+            flex-grow: 1;
+            min-width: 200px;
+        }
+        
+        /* Side Menu */
+        #side-menu {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 300px;
+            height: 100%;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            z-index: 1000;
+            transition: left 0.3s ease;
+            padding: 2rem;
+            border-right: 1px solid var(--border-color);
+        }
+        #side-menu.open {
+            left: 0;
+        }
+        #side-menu ul {
+            list-style: none;
+            padding: 0;
+        }
+        #side-menu ul li a {
+            display: block;
+            color: #fff;
+            text-decoration: none;
+            padding: 1rem;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            transition: background 0.2s ease;
+        }
+        #side-menu ul li a:hover {
+            background: var(--container-bg);
+        }
+
+        /* Forms */
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 1rem;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 15px;
+            color: #fff;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--focus-glow);
+            box-shadow: 0 0 10px var(--focus-glow);
+        }
+        
+        textarea {
+            min-height: 200px;
+            resize: vertical;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.3s ease;
+            text-align: center;
+        }
+        .btn:hover { transform: scale(1.05); }
+        .btn-solid {
+            background: linear-gradient(90deg, var(--gradient-2), var(--gradient-1));
+            border: none;
+            color: #fff;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--gradient-3);
+            color: var(--gradient-3);
+        }
+        .btn-outline:hover { box-shadow: 0 0 15px var(--gradient-3); }
+        .btn-outline.active {
+             background: var(--gradient-3);
+             color: var(--dark-bg);
+             box-shadow: 0 0 15px var(--gradient-3);
+        }
+
+        /* App Grid */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .app-card {
+            background: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 25px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: transform 0.2s ease, box-shadow 0.3s ease;
+        }
+        .app-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        .app-card-logo {
+            width: 100px;
+            height: 100px;
+            border-radius: 20px;
+            object-fit: cover;
+            margin-bottom: 1rem;
+            background: #000;
+        }
+        .app-card-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            flex-grow: 1;
+        }
+        
+        /* Star Rating */
+        .rating-stars {
+            color: #555;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        .rating-stars span {
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        .rating-stars span:hover,
+        .rating-stars span.hovered {
+            color: gold;
+        }
+        .rating-stars.rated span {
+             cursor: default;
+        }
+        
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.visible {
+            display: flex;
+        }
+        .modal iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #000;
+        }
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 3rem;
+            color: white;
+            cursor: pointer;
+            text-shadow: 0 0 10px #000;
+        }
+        
+        /* Notification Toast */
+        #notification-toast {
+            position: fixed;
+            bottom: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(90deg, var(--gradient-2), var(--gradient-1));
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 15px;
+            z-index: 3000;
+            transition: bottom 0.5s ease-in-out;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+    </style>
+</head>
+<body>
+
+    <nav id="side-menu">
+        <ul>
+            <li><a href="#" id="menu-link-home">Home</a></li>
+            <li><a href="#" id="menu-link-profile">User Profile</a></li>
+            <li><a href="#" id="menu-link-upload">Upload App/Game</a></li>
+        </ul>
+    </nav>
+    
+    <div id="app">
+        <header>
+            <div class="menu-icon" id="menu-toggle">☰</div>
+            <h1>Neon App Hub</h1>
+            <input type="search" id="search-bar" placeholder="Search for apps...">
+            <div class="filters">
+                <button class="btn btn-outline active" data-filter="All">All</button>
+                <button class="btn btn-outline" data-filter="Game">Games</button>
+                <button class="btn btn-outline" data-filter="App">Apps</button>
+            </div>
+        </header>
+
+        <main id="main-content">
+            <!-- App Grid View -->
+            <div id="app-grid-view" class="page-view active">
+                <div id="app-grid" class="grid-container">
+                    <!-- App cards will be inserted here by JS -->
+                </div>
+            </div>
+
+            <!-- Profile View -->
+            <div id="profile-view" class="page-view">
+                <div class="content-box">
+                    <h2>Your Profile</h2>
+                    <p style="text-align: center; margin-bottom: 1.5rem;">This info is saved on your device and is required for submissions.</p>
+                    <form id="profile-form">
+                        <input type="text" id="profile-name" placeholder="Your Name" required>
+                        <input type="email" id="profile-email" placeholder="Your Email" required>
+                        <button type="submit" class="btn btn-solid">Save Profile</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Submission View -->
+            <div id="submission-view" class="page-view">
+                 <div class="content-box">
+                    <h2>Upload App/Game</h2>
+                    <form id="submission-form">
+                        <textarea id="submission-code" placeholder="Paste your full HTML code here..." required></textarea>
+                        <input type="text" id="submission-title" placeholder="Title" required>
+                        <input type="url" id="submission-logo" placeholder="Logo Image URL" required>
+                        <select id="submission-type" required>
+                             <option value="" disabled selected>Select Type...</option>
+                            <option value="Game">Game</option>
+                            <option value="App">App</option>
+                        </select>
+                        <button type="submit" class="btn btn-solid">Submit for Review</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Fullscreen Play Modal -->
+    <div id="game-modal" class="modal">
+        <span class="modal-close" id="modal-close-btn">×</span>
+        <iframe id="game-iframe" srcdoc=""></iframe>
+    </div>
+    
+    <!-- Notification Toast -->
+    <div id="notification-toast"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- IMPORTANT: PASTE YOUR FIREBASE CONFIGURATION HERE ---
+            const firebaseConfig = {
+  apiKey: "AIzaSyAmc90s8je_TSM1dTZpARDg6cg-dH_TQLI",
+  authDomain: "ticm-77dac.firebaseapp.com",
+  databaseURL: "https://ticm-77dac-default-rtdb.firebaseio.com",
+  projectId: "ticm-77dac",
+  storageBucket: "ticm-77dac.firebasestorage.app",
+  messagingSenderId: "809324606678",
+  appId: "1:809324606678:web:5b0fd6c5fdb3a7c1ea4577"
+};
+            // --- END OF FIREBASE CONFIGURATION ---
+            
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.database();
+
+            // DOM Elements
+            const appGrid = document.getElementById('app-grid');
+            const searchBar = document.getElementById('search-bar');
+            const filterButtons = document.querySelectorAll('.filters .btn');
+            
+            const gameModal = document.getElementById('game-modal');
+            const gameIframe = document.getElementById('game-iframe');
+            const modalCloseBtn = document.getElementById('modal-close-btn');
+            
+            const menuToggle = document.getElementById('menu-toggle');
+            const sideMenu = document.getElementById('side-menu');
+
+            const pageViews = document.querySelectorAll('.page-view');
+            const mainContent = document.getElementById('main-content');
+            
+            const profileForm = document.getElementById('profile-form');
+            const profileNameInput = document.getElementById('profile-name');
+            const profileEmailInput = document.getElementById('profile-email');
+            
+            const submissionForm = document.getElementById('submission-form');
+
+            const notificationToast = document.getElementById('notification-toast');
+
+            let allItems = [];
+            let currentFilter = 'All';
+
+            // --- Navigation & View Management ---
+            
+            function showView(viewId) {
+                pageViews.forEach(view => view.classList.remove('active'));
+                document.getElementById(viewId).classList.add('active');
+                sideMenu.classList.remove('open');
+                mainContent.style.filter = 'none';
+                window.scrollTo(0,0);
+            }
+
+            menuToggle.addEventListener('click', () => {
+                sideMenu.classList.toggle('open');
+                mainContent.style.filter = sideMenu.classList.contains('open') ? 'blur(5px)' : 'none';
+            });
+            
+            document.getElementById('menu-link-home').addEventListener('click', (e) => { e.preventDefault(); showView('app-grid-view'); });
+            document.getElementById('menu-link-profile').addEventListener('click', (e) => { e.preventDefault(); showView('profile-view'); });
+            document.getElementById('menu-link-upload').addEventListener('click', (e) => { e.preventDefault(); showView('submission-view'); });
+
+
+            // --- Profile Management ---
+            function loadProfile() {
+                const profile = JSON.parse(localStorage.getItem('userProfile'));
+                if (profile) {
+                    profileNameInput.value = profile.name;
+                    profileEmailInput.value = profile.email;
+                    listenForNotifications(profile.email);
+                }
+            }
+
+            profileForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const profile = {
+                    name: profileNameInput.value,
+                    email: profileEmailInput.value
+                };
+                localStorage.setItem('userProfile', JSON.stringify(profile));
+                alert('Profile saved!');
+                listenForNotifications(profile.email);
+                showView('app-grid-view');
+            });
+
+
+            // --- Submission Management ---
+            submissionForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const profile = JSON.parse(localStorage.getItem('userProfile'));
+                if (!profile || !profile.name || !profile.email) {
+                    alert('Please complete your user profile before submitting an app.');
+                    showView('profile-view');
+                    return;
+                }
+
+                const submissionData = {
+                    htmlCode: document.getElementById('submission-code').value,
+                    title: document.getElementById('submission-title').value,
+                    logoUrl: document.getElementById('submission-logo').value,
+                    type: document.getElementById('submission-type').value,
+                    submitterName: profile.name,
+                    submitterEmail: profile.email,
+                    submittedAt: firebase.database.ServerValue.TIMESTAMP
+                };
+
+                db.ref('pendingSubmissions').push(submissionData)
+                    .then(() => {
+                        alert('Your submission has been sent for review. Thank you!');
+                        submissionForm.reset();
+                        showView('app-grid-view');
+                    })
+                    .catch(error => {
+                        alert('Error submitting: ' + error.message);
+                    });
+            });
+
+            // --- Main App Grid, Filtering & Search ---
+            
+            db.ref('items').on('value', snapshot => {
+                allItems = [];
+                if(snapshot.exists()) {
+                    snapshot.forEach(childSnapshot => {
+                        allItems.push({ key: childSnapshot.key, ...childSnapshot.val() });
+                    });
+                }
+                allItems.sort((a, b) => b.createdAt - a.createdAt); // Newest first
+                renderItems();
+            });
+
+            searchBar.addEventListener('input', renderItems);
+            filterButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    currentFilter = btn.dataset.filter;
+                    filterButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    renderItems();
+                });
+            });
+
+            function renderItems() {
+                const searchTerm = searchBar.value.toLowerCase();
+                const filteredItems = allItems.filter(item => {
+                    const matchesFilter = currentFilter === 'All' || item.type === currentFilter;
+                    const matchesSearch = item.title.toLowerCase().includes(searchTerm);
+                    return matchesFilter && matchesSearch;
+                });
+
+                appGrid.innerHTML = '';
+                if (filteredItems.length === 0) {
+                    appGrid.innerHTML = `<p style="grid-column: 1 / -1; text-align: center;">No items match your criteria.</p>`;
+                    return;
+                }
+                
+                filteredItems.forEach(item => {
+                    const card = createAppCard(item);
+                    appGrid.appendChild(card);
+                });
+            }
+
+            // --- App Card, Play & Rating ---
+            function createAppCard(item) {
+                const card = document.createElement('div');
+                card.className = 'app-card';
+                
+                const avgRating = item.ratingCount > 0 ? (item.totalRating / item.ratingCount) : 0;
+                const hasRated = localStorage.getItem(`rated_${item.key}`);
+
+                let starsHTML = '';
+                for (let i = 1; i <= 5; i++) {
+                    starsHTML += `<span data-value="${i}" class="${i <= avgRating ? 'hovered' : ''}">${i <= avgRating ? '★' : '☆'}</span>`;
+                }
+
+                card.innerHTML = `
+                    <img src="${item.logoUrl}" alt="${item.title} Logo" class="app-card-logo" onerror="this.src='https://via.placeholder.com/100'">
+                    <h3 class="app-card-title">${item.title}</h3>
+                    <div class="rating-stars ${hasRated ? 'rated' : ''}" data-itemkey="${item.key}">
+                        ${starsHTML}
+                    </div>
+                    <button class="btn btn-outline play-btn">Play</button>
+                `;
+
+                // Play functionality
+                card.querySelector('.play-btn').addEventListener('click', () => {
+                    const fullScreenCss = '<style>html, body { margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; } * { box-sizing: border-box; }</style>';
+                    gameIframe.srcdoc = fullScreenCss + item.htmlCode;
+                    gameModal.classList.add('visible');
+                });
+                
+                // Rating functionality
+                const stars = card.querySelectorAll('.rating-stars span');
+                if (!hasRated) {
+                    stars.forEach(star => {
+                        star.addEventListener('mouseover', () => {
+                            stars.forEach(s => s.classList.remove('hovered'));
+                            for (let i = 0; i < star.dataset.value; i++) {
+                                stars[i].classList.add('hovered');
+                            }
+                        });
+                        star.addEventListener('mouseout', () => {
+                             stars.forEach(s => s.classList.remove('hovered'));
+                        });
+                        star.addEventListener('click', () => {
+                            const newRating = parseInt(star.dataset.value);
+                            rateItem(item.key, newRating);
+                        });
+                    });
+                }
+
+                return card;
+            }
+
+            function rateItem(key, rating) {
+                 if (localStorage.getItem(`rated_${key}`)) {
+                    alert("You've already rated this item.");
+                    return;
+                }
+
+                const itemRef = db.ref(`items/${key}`);
+                itemRef.transaction(item => {
+                    if (item) {
+                        item.totalRating = (item.totalRating || 0) + rating;
+                        item.ratingCount = (item.ratingCount || 0) + 1;
+                    }
+                    return item;
+                }).then(() => {
+                     localStorage.setItem(`rated_${key}`, 'true');
+                     alert('Thanks for rating!');
+                });
+            }
+
+            modalCloseBtn.addEventListener('click', () => {
+                gameModal.classList.remove('visible');
+                gameIframe.srcdoc = ''; // Stop the game/app
+            });
+
+
+            // --- Notifications ---
+            const sanitizeEmail = (email) => email.replace(/[.#$[\]]/g, "_");
+
+            function listenForNotifications(email) {
+                if(!email) return;
+                const sanitizedEmail = sanitizeEmail(email);
+                const notificationsRef = db.ref(`notifications/${sanitizedEmail}`);
+
+                notificationsRef.on('child_added', snapshot => {
+                    const notification = snapshot.val();
+                    showNotificationToast(notification.message);
+                    snapshot.ref.remove(); // Remove after showing
+                });
+            }
+
+            function showNotificationToast(message) {
+                notificationToast.textContent = message;
+                notificationToast.style.bottom = '20px';
+                setTimeout(() => {
+                    notificationToast.style.bottom = '-100px';
+                }, 5000);
+            }
+
+            // --- Initial Load ---
+            loadProfile();
+        });
+    </script>
+</body>
+</html>
